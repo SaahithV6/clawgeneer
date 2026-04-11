@@ -71,6 +71,14 @@ tools:
     output_formats: [".vtu"]
     description: "CalculiX .frd -> .vtu converter for pyvista"
 
+  freecad:
+    adapter: null
+    check_path: /usr/bin/freecad
+    install_cmd: "apt install freecad"
+    input_formats: [".FCStd"]
+    output_formats: [".step", ".iges"]
+    description: "GUI CAD modelling. Use via VNC/NoMachine. Export to STEP for pipeline."
+
   ollama:
     adapter: null
     check_binary: ollama

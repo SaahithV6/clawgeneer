@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import shutil
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -29,6 +30,10 @@ class ToolManager:
         if not tool:
             return False
 
+        # Check by filesystem path (e.g. freecad installed via apt)
+        if "check_path" in tool:
+            return Path(tool["check_path"]).exists()
+
         if "check_python" in tool:
             try:
                 importlib.import_module(tool["check_python"])
@@ -37,7 +42,24 @@ class ToolManager:
                 return False
 
         if "check_binary" in tool:
-            return shutil.which(tool["check_binary"]) is not None
+            binary = tool["check_binary"]
+
+            # If the tool needs a shell environment sourced first (e.g. OpenFOAM),
+            # run `bash -c "source <source_cmd> && which <binary>"` instead of
+            # using shutil.which(), which only searches the current PATH.
+            if "source_cmd" in tool:
+                try:
+                    result = subprocess.run(
+                        ["bash", "-c", f"{tool['source_cmd']} && which {binary}"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    return result.returncode == 0
+                except (subprocess.TimeoutExpired, OSError):
+                    return False
+
+            return shutil.which(binary) is not None
 
         return False
 
