@@ -490,7 +490,7 @@ Build in this order. Do not skip phases.
 12. `cli/oc.py` — terminal interface
 13. `ai/constraint_handler.py` — vague prompt -> filled params
 14. `ai/result_review.py` — results -> suggestions
-15. `tools/bootstrap.sh` — full Ubuntu 24.04 install script
+15. `tools/bootstrap.sh` — full Ubuntu 22.04 / 24.04 install script (auto-detects Python 3)
 16. Phase 11+: Assembly support, MBDyn/Chrono adapter, topology optimization (ToPy), Elmer FEM
 
 ---
