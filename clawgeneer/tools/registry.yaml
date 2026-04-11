@@ -1,0 +1,78 @@
+# ClawGeneer Tool Registry
+# Each entry declares a tool: adapter class, install command, check command, formats
+
+tools:
+  build123d:
+    adapter: clawgeneer.adapters.cad.build123d_adapter.Build123dAdapter
+    check_python: build123d
+    install_cmd: pip install build123d
+    input_formats: []
+    output_formats: [".step"]
+    description: "PRIMARY CAD engine — modern CadQuery successor with reliable face labelling"
+
+  cadquery:
+    adapter: clawgeneer.adapters.cad.cadquery_adapter.CadQueryAdapter
+    check_python: cadquery
+    install_cmd: pip install cadquery
+    input_formats: []
+    output_formats: [".step"]
+    description: "Secondary/fallback CAD engine"
+
+  gmsh:
+    adapter: clawgeneer.adapters.mesh.gmsh_adapter.GmshAdapter
+    check_python: gmsh
+    install_cmd: pip install gmsh
+    input_formats: [".step", ".iges", ".igs"]
+    output_formats: [".msh"]
+    description: "Primary mesher for FEA and CFD. Always outputs v2.2 format."
+
+  meshio:
+    adapter: null
+    check_python: meshio
+    install_cmd: "pip install meshio[all]"
+    input_formats: [".msh"]
+    output_formats: [".inp"]
+    description: "Mesh format conversion: .msh -> CalculiX .inp"
+
+  calculix:
+    adapter: clawgeneer.adapters.fea.calculix_adapter.CalculixAdapter
+    check_binary: ccx
+    install_cmd: "apt install calculix-ccx"
+    input_formats: [".inp"]
+    output_formats: [".frd", ".dat"]
+    description: "FEA solver: stress, displacement, thermal. Abaqus-compatible input."
+
+  openfoam:
+    adapter: clawgeneer.adapters.cfd.openfoam_adapter.OpenFOAMAdapter
+    check_binary: simpleFoam
+    install_cmd: "apt install openfoam2312"
+    source_cmd: "source /usr/lib/openfoam/openfoam2312/etc/bashrc"
+    input_formats: [".msh"]
+    output_formats: ["OpenFOAM case directory"]
+    description: "CFD solver (ESI v2312). Use simpleFoam for steady incompressible RANS."
+
+  foamlib:
+    adapter: null
+    check_python: foamlib
+    install_cmd: pip install foamlib
+    description: "OpenFOAM Python automation (replaces PyFoam). Dictionary editing, run management."
+
+  pyvista:
+    adapter: clawgeneer.adapters.results.pyvista_adapter.PyvistaAdapter
+    check_python: pyvista
+    install_cmd: "pip install pyvista[all]"
+    description: "Results visualisation. Requires xvfb on headless server."
+
+  ccx2paraview:
+    adapter: null
+    check_python: ccx2paraview
+    install_cmd: pip install ccx2paraview
+    input_formats: [".frd"]
+    output_formats: [".vtu"]
+    description: "CalculiX .frd -> .vtu converter for pyvista"
+
+  ollama:
+    adapter: null
+    check_binary: ollama
+    install_cmd: "curl -fsSL https://ollama.com/install.sh | sh"
+    description: "Local LLM server. Default model: qwen2.5-coder:7b"

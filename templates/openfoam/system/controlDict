@@ -1,0 +1,27 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+
+application     simpleFoam;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         500;
+deltaT          1;
+
+writeControl    timeStep;
+writeInterval   100;
+purgeWrite      1;          // keep only latest time step to save disk space
+
+writePrecision  6;
+writeCompression off;
+
+runTimeModifiable true;
+
+functions {}
