@@ -227,15 +227,16 @@ optimization:
 
 ## Setup
 
-Install all dependencies on a fresh Ubuntu Server 24.04 machine:
+Install all dependencies on a fresh Ubuntu Server 22.04 or 24.04 machine — one set of commands, no manual steps:
 
 ```bash
+sudo apt install -y git
 git clone https://github.com/SaahithV6/clawgeneer.git
 cd clawgeneer
-bash clawgeneer/tools/bootstrap.sh
+sudo bash clawgeneer/tools/bootstrap.sh
 ```
 
-The bootstrap script installs OpenFOAM ESI v2312, CalculiX, Python venv with all dependencies, and optionally Ollama for local LLM inference.
+The bootstrap script auto-detects the system Python version (3.11, 3.12, or 3.13 — whichever ships with your Ubuntu release), and installs: OpenFOAM ESI v2312, CalculiX, FreeCAD, a Python venv with all dependencies, shell environment configuration, and optionally Ollama for local LLM inference.
 
 ### Environment Variables
 
