@@ -5,6 +5,7 @@ Commands:
   oc run <name>            Run the full pipeline for a project
   oc status <name>         Show pipeline state
   oc check                 Verify all tools are installed
+  oc setup-keys            Configure API keys for LLM features
   oc chat <name>           Interactive AI assistant (stub)
 """
 
@@ -16,6 +17,7 @@ import logging
 import os
 import shutil
 import sys
+from getpass import getpass
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -129,6 +131,51 @@ def cmd_check(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_setup_keys(_args: argparse.Namespace) -> int:
+    """Interactive setup for API keys and environment variables."""
+    bashrc = Path.home() / ".bashrc"
+
+    print("\n=== ClawGeneer API Key Setup ===\n")
+
+    # Check if already configured
+    existing = bashrc.read_text() if bashrc.exists() else ""
+    if "GITHUB_PAT" in existing:
+        print("⚠  GITHUB_PAT already found in ~/.bashrc")
+        overwrite = input("  Overwrite? [y/N]: ").strip().lower()
+        if overwrite not in ("y", "yes"):
+            print("  Skipping. Current config preserved.")
+            return 0
+
+    # Get PAT
+    print("GitHub Personal Access Token (for GitHub Models LLM API)")
+    print("  Get one at: https://github.com/settings/tokens")
+    print("  No special scopes needed for GitHub Models.")
+    pat = getpass("\n  Enter your GitHub PAT: ").strip()
+
+    if not pat:
+        print("  No token entered. Skipping.")
+        return 0
+
+    # Get model preference
+    print("\n  Available models: gpt-4o (default), gpt-5, gpt-5-mini, gpt-5-nano")
+    model = input("  LLM model [gpt-4o]: ").strip() or "gpt-4o"
+
+    # Write to bashrc
+    block = (
+        "\n# ── ClawGeneer API Configuration ──\n"
+        f'export GITHUB_PAT="{pat}"\n'
+        f'export CLAWGENEER_LLM_MODEL="{model}"\n'
+        'export CLAWGENEER_LLM_MODE="interactive"\n'
+    )
+
+    with open(bashrc, "a") as f:
+        f.write(block)
+
+    print(f"\n✓ API keys written to {bashrc}")
+    print("  Run: source ~/.bashrc")
+    return 0
+
+
 def cmd_chat(args: argparse.Namespace) -> int:
     """Interactive AI chat assistant (stub)."""
     print(f"oc chat {args.name} — interactive AI assistant")
@@ -163,6 +210,10 @@ def main() -> None:
     # check
     p_check = subparsers.add_parser("check", help="Check tool installation status")
     p_check.set_defaults(func=cmd_check)
+
+    # setup-keys
+    p_keys = subparsers.add_parser("setup-keys", help="Configure API keys for LLM features")
+    p_keys.set_defaults(func=cmd_setup_keys)
 
     # chat
     p_chat = subparsers.add_parser("chat", help="Interactive AI chat assistant")

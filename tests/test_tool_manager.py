@@ -28,6 +28,7 @@ class TestToolManagerRegistry:
             "meshio",
             "calculix",
             "openfoam",
+            "freecad",
             "pyvista",
             "ccx2paraview",
             "ollama",
@@ -101,6 +102,58 @@ class TestCheckInstalled:
             "description": "no check method",
         }
         assert manager.check_installed("_test_no_check") is False
+
+    def test_check_path_existing(self, tmp_path: Path) -> None:
+        """check_path should return True when the path exists."""
+        existing_file = tmp_path / "mybinary"
+        existing_file.touch()
+        manager = ToolManager()
+        manager._registry["tools"]["_test_path_exists"] = {
+            "check_path": str(existing_file),
+            "description": "test path check",
+        }
+        assert manager.check_installed("_test_path_exists") is True
+
+    def test_check_path_missing(self, tmp_path: Path) -> None:
+        """check_path should return False when the path does not exist."""
+        manager = ToolManager()
+        manager._registry["tools"]["_test_path_missing"] = {
+            "check_path": str(tmp_path / "nonexistent_binary"),
+            "description": "test path check missing",
+        }
+        assert manager.check_installed("_test_path_missing") is False
+
+    def test_source_cmd_binary_found(self) -> None:
+        """source_cmd + check_binary should return True when subprocess succeeds."""
+        manager = ToolManager()
+        manager._registry["tools"]["_test_sourced"] = {
+            "check_binary": "python3",
+            "source_cmd": "true",  # 'true' is always available; sources a no-op
+            "description": "test sourced binary",
+        }
+        assert manager.check_installed("_test_sourced") is True
+
+    def test_source_cmd_binary_missing(self) -> None:
+        """source_cmd + check_binary should return False when binary is not found."""
+        manager = ToolManager()
+        manager._registry["tools"]["_test_sourced_missing"] = {
+            "check_binary": "nonexistent_binary_xyz_abc",
+            "source_cmd": "true",
+            "description": "test sourced binary missing",
+        }
+        assert manager.check_installed("_test_sourced_missing") is False
+
+    def test_source_cmd_timeout_returns_false(self) -> None:
+        """source_cmd subprocess timeout should return False, not raise."""
+        import subprocess
+        manager = ToolManager()
+        manager._registry["tools"]["_test_timeout"] = {
+            "check_binary": "python3",
+            "source_cmd": "true",
+            "description": "test timeout",
+        }
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="bash", timeout=10)):
+            assert manager.check_installed("_test_timeout") is False
 
 
 class TestCheckAll:
