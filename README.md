@@ -1,4 +1,4 @@
-# ClawGeneer 🦾
+# ClawGeneer 
 
 **An open-source engineering orchestration platform for Ubuntu Server.**
 
