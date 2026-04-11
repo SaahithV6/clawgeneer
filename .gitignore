@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project data (do not commit engineering projects)
+projects/
+~/projects/
+
+# OpenFOAM artifacts
+processor*/
+postProcessing/
+*.foam
+*.log
+
+# CalculiX artifacts
+*.frd
+*.dat
+*.cvg
+
+# Gmsh
+*.msh
+*.pos
+
+# pyvista / VTK
+*.vtu
+*.vtk
+*.pvtu
+
+# OS
+.DS_Store
+Thumbs.db

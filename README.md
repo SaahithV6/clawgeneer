@@ -33,11 +33,11 @@ All tools are open-source and run fully locally on your hardware.
 
 | Stage | Tool | Replaces |
 |---|---|---|
-| **CAD** | CadQuery (AI-generated) / FreeCAD (GUI) | SolidWorks, Inventor |
+| **CAD** | Build123d (AI-generated, primary) / CadQuery (fallback) / FreeCAD (GUI) | SolidWorks, Inventor |
 | **Meshing** | Gmsh | ANSYS Meshing, HyperMesh |
 | **FEA** | CalculiX | ANSYS Mechanical, Abaqus |
-| **CFD** | OpenFOAM | ANSYS Fluent, STAR-CCM+ |
-| **Results** | pyvista / pvpython | ANSYS Post, EnSight |
+| **CFD** | OpenFOAM ESI v2312 | ANSYS Fluent, STAR-CCM+ |
+| **Results** | pyvista (headless via Xvfb) | ANSYS Post, EnSight |
 | **AI** | GitHub Models API (interactive) / Ollama (offline) | — |
 | **Optimisation** | Optuna | MATLAB Optimisation Toolbox |
 
@@ -174,7 +174,7 @@ project:
 
 geometry:
   source: generate        # generate | upload | freecad_gui
-  tool: cadquery
+  tool: build123d         # build123d (primary) | cadquery | freecad
   parameters:
     length: 100           # mm
     width: 60
@@ -227,18 +227,39 @@ optimization:
 
 ## Setup
 
-Full bootstrap script coming in Phase 1. It will install all dependencies on a fresh Ubuntu Server 24.04 machine with a single command:
+Install all dependencies on a fresh Ubuntu Server 24.04 machine:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SaahithV6/clawgeneer/main/clawgeneer/tools/bootstrap.sh | bash
+git clone https://github.com/SaahithV6/clawgeneer.git
+cd clawgeneer
+bash clawgeneer/tools/bootstrap.sh
 ```
+
+The bootstrap script installs OpenFOAM ESI v2312, CalculiX, Python venv with all dependencies, and optionally Ollama for local LLM inference.
 
 ### Environment Variables
 
 ```bash
 export GITHUB_PAT=<your_github_personal_access_token>
-export CLAWGENEER_LLM_MODEL=gpt-4o
-export CLAWGENEER_PROJECTS_DIR=/home/engineer/projects
+export CLAWGENEER_LLM_MODEL=gpt-4o              # or gpt-5-mini, gpt-5, etc.
+export CLAWGENEER_OLLAMA_MODEL=qwen2.5-coder:7b # default for 16GB no-GPU
+export CLAWGENEER_PROJECTS_DIR=~/projects
+```
+
+### Quick Start
+
+```bash
+# Add clawgeneer to PYTHONPATH
+export PYTHONPATH=/path/to/clawgeneer:$PYTHONPATH
+
+# Create a new project
+python -m clawgeneer.cli.oc init my_bracket
+
+# Edit ~/projects/my_bracket/project.yaml, then run:
+python -m clawgeneer.cli.oc run my_bracket
+
+# Check tool installation status
+python -m clawgeneer.cli.oc check
 ```
 
 ---
@@ -267,18 +288,21 @@ See `CLAUDE.md` for the full architectural specification, all design decisions, 
 
 | Phase | Focus | Status |
 |---|---|---|
-| 1 | Pydantic schema + BaseAdapter contract | 🔲 Next |
-| 2 | Gmsh adapter (mesh) | 🔲 |
-| 3 | CalculiX adapter (FEA) | 🔲 |
-| 4 | CadQuery adapter + LLM CAD gen | 🔲 |
-| 5 | OpenFOAM adapter (CFD) | 🔲 |
-| 6 | pyvista results adapter | 🔲 |
-| 7 | Pipeline runner + CLI | 🔲 |
-| 8 | Constraint handler + Result review AI | 🔲 |
+| 1 | Pydantic schema + BaseAdapter contract | ✅ |
+| 2 | Gmsh adapter (mesh) | ✅ |
+| 3 | CalculiX adapter (FEA) | ✅ |
+| 4 | Build123d adapter (primary CAD) + LLM CAD gen | ✅ |
+| 5 | OpenFOAM ESI v2312 adapter (CFD) | ✅ |
+| 6 | pyvista results adapter (Xvfb headless) | ✅ |
+| 7 | Pipeline runner + CLI (`oc` command) | ✅ |
+| 8 | Constraint handler + Result review AI | ✅ |
 | 9 | Optimisation loop (Optuna) | 🔲 |
-| 10 | Bootstrap script + systemd daemon | 🔲 |
-| 11 | Assembly support | 🔲 |
-| 12 | Web dashboard | 🔲 |
+| 10 | Bootstrap script + systemd daemon | ✅ |
+| 11 | Assembly support (Build123d BuildAssembly) | 🔲 |
+| 12 | Multibody dynamics (MBDyn / Chrono) | 🔲 |
+| 13 | Topology optimisation (ToPy) | 🔲 |
+| 14 | Elmer FEM (multiphysics coupling) | 🔲 |
+| 15 | Web dashboard | 🔲 |
 
 ---
 

@@ -1,0 +1,52 @@
+project:
+  name: my_project
+  type: part
+  description: ""
+
+geometry:
+  source: generate      # generate | upload | freecad_gui
+  tool: build123d       # build123d | cadquery | freecad
+  parameters:
+    length: 100         # mm
+    width: 60
+    thickness: 8
+  surface_map: {}       # populated automatically by gmsh_adapter
+
+material:
+  name: steel_mild
+  youngs_modulus: 210000  # MPa
+  poisson_ratio: 0.3
+  density: 7850           # kg/m^3
+  yield_strength: 250     # MPa
+
+mesh:
+  tool: gmsh
+  element_size: 3.0       # mm
+  element_order: 1
+  algorithm: 6
+
+jobs:
+  - type: fea
+    solver: calculix
+    name: static_analysis
+    boundary_conditions:
+      - surface: bottom_face
+        type: fixed
+      - surface: top_face
+        type: force
+        magnitude: 5000   # N
+        direction: [0, -1, 0]
+
+results: {}
+
+optimization:
+  enabled: false
+  objective: minimize_mass
+  constraints:
+    max_stress_mpa: 200
+  parameter_bounds:
+    thickness: [3, 15]
+  max_iterations: 20
+  sampler: tpe
+
+components: []
