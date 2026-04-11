@@ -205,7 +205,7 @@ else
 export CLAWGENEER_INSTALL_DIR="${INSTALL_DIR}"
 export CLAWGENEER_PROJECTS_DIR="${PROJECTS_DIR}"
 export CLAWGENEER_LLM_MODE="interactive"
-export CLAWGENEER_LLM_MODEL="gpt-4o"
+export CLAWGENEER_LLM_MODEL="gpt-4o"             # Update to latest model as needed (gpt-5, gpt-5-mini, etc.)
 export CLAWGENEER_OLLAMA_MODEL="qwen2.5-coder:7b"
 
 # Activate ClawGeneer venv when using 'oc' command
