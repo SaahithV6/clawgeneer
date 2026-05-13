@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-# ─── Colour helpers ──────────────────────────────────────────────────────────
+# ─── Colour helpers ────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -24,13 +24,13 @@ section() { echo -e "\n${BOLD}${CYAN}══════════════�
             echo -e "${BOLD}${CYAN}  $*${RESET}"; \
             echo -e "${BOLD}${CYAN}══════════════════════════════════════════════════${RESET}"; }
 
-# ─── Root check ───────────────────────────────────────────────────────────────
+# ─── Root check ────────────────────────────────────────────────────────────────
 if [[ $EUID -ne 0 ]]; then
     error "This script must be run as root (sudo bash clawgeneer/tools/bootstrap.sh)"
     exit 1
 fi
 
-# ─── Resolve paths ────────────────────────────────────────────────────────────
+# ─── Resolve paths ─────────────────────────────────────────────────────────────
 # Script lives at <repo>/clawgeneer/tools/bootstrap.sh — repo root is two levels up
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -44,7 +44,15 @@ PROJECTS_DIR="${REAL_HOME}/projects"
 OPENFOAM_VERSION="openfoam2312"
 OPENFOAM_BASHRC="/usr/lib/openfoam/${OPENFOAM_VERSION}/etc/bashrc"
 
-# ─── 0. OS detection ─────────────────────────────────────────────────────────
+# FreeCAD AppImage config — update FREECAD_VERSION to upgrade
+FREECAD_VERSION="1.0.0"
+FREECAD_APPIMAGE="FreeCAD_${FREECAD_VERSION}-conda-Linux-x86_64-py311.AppImage"
+FREECAD_APPIMAGE_URL="https://github.com/FreeCAD/FreeCAD/releases/download/${FREECAD_VERSION}/${FREECAD_APPIMAGE}"
+FREECAD_INSTALL_DIR="/opt/freecad"
+FREECAD_BIN="/usr/local/bin/freecad"
+FREECAD_CMD_BIN="/usr/local/bin/freecadcmd"
+
+# ─── 0. OS detection ───────────────────────────────────────────────────────────
 section "0. OS detection"
 
 if [[ -f /etc/os-release ]]; then
@@ -80,11 +88,13 @@ info "Projects dir : ${PROJECTS_DIR}"
 info "Calling user : ${REAL_USER}"
 echo
 
-# ─── 1. System packages ───────────────────────────────────────────────────────
+# ─── 1. System packages ────────────────────────────────────────────────────────
 section "1. System packages"
 
 apt-get update -qq
 
+# Note: freecad is intentionally absent — installed via AppImage in section 2
+# because the apt package is missing from Ubuntu 24.04 repos.
 SYSTEM_PKGS=(
     build-essential
     git
@@ -107,7 +117,6 @@ SYSTEM_PKGS=(
     libxinerama1
     libsm6
     libice6
-    freecad
 )
 
 for pkg in "${SYSTEM_PKGS[@]}"; do
@@ -125,8 +134,59 @@ done
 
 success "System packages ready"
 
-# ─── 2. CalculiX ──────────────────────────────────────────────────────────────
-section "2. CalculiX FEA solver"
+# ─── 2. FreeCAD (AppImage) ─────────────────────────────────────────────────────
+# FreeCAD is not available in Ubuntu 24.04 apt repos. We use the official
+# AppImage, extracted in-place so FUSE / libfuse2 is not required at runtime.
+# Wrapper scripts at /usr/local/bin/{freecad,freecadcmd} delegate to AppRun.
+section "2. FreeCAD ${FREECAD_VERSION} (AppImage)"
+
+if [[ -f "${FREECAD_BIN}" ]]; then
+    info "FreeCAD already installed (${FREECAD_BIN})"
+else
+    info "Downloading FreeCAD ${FREECAD_VERSION} AppImage (~700 MB, this may take a while)..."
+    mkdir -p "${FREECAD_INSTALL_DIR}"
+
+    wget -q --show-progress \
+        -O "${FREECAD_INSTALL_DIR}/${FREECAD_APPIMAGE}" \
+        "${FREECAD_APPIMAGE_URL}"
+
+    chmod +x "${FREECAD_INSTALL_DIR}/${FREECAD_APPIMAGE}"
+
+    # Extract in-place — avoids the libfuse2 runtime dependency entirely.
+    # squashfs-root/ will contain the full FreeCAD installation.
+    info "Extracting AppImage to ${FREECAD_INSTALL_DIR}/squashfs-root ..."
+    (
+        cd "${FREECAD_INSTALL_DIR}"
+        "./${FREECAD_APPIMAGE}" --appimage-extract >/dev/null
+    )
+
+    # Remove the AppImage archive now that it is extracted
+    rm "${FREECAD_INSTALL_DIR}/${FREECAD_APPIMAGE}"
+
+    # ── Wrapper: freecad (GUI / general entry point) ──────────────────────────
+    cat > "${FREECAD_BIN}" << 'WRAPPER'
+#!/usr/bin/env bash
+# ClawGeneer — FreeCAD launcher (AppImage extracted)
+exec /opt/freecad/squashfs-root/AppRun "$@"
+WRAPPER
+    chmod +x "${FREECAD_BIN}"
+
+    # ── Wrapper: freecadcmd (headless console for scripted STEP export) ────────
+    cat > "${FREECAD_CMD_BIN}" << 'WRAPPER'
+#!/usr/bin/env bash
+# ClawGeneer — FreeCAD headless console (AppImage extracted)
+# Usage: freecadcmd export_step.py
+exec /opt/freecad/squashfs-root/AppRun --console "$@"
+WRAPPER
+    chmod +x "${FREECAD_CMD_BIN}"
+
+    success "FreeCAD ${FREECAD_VERSION} installed"
+    success "  GUI     : ${FREECAD_BIN}"
+    success "  Headless: ${FREECAD_CMD_BIN}"
+fi
+
+# ─── 3. CalculiX ───────────────────────────────────────────────────────────────
+section "3. CalculiX FEA solver"
 
 if command -v ccx &>/dev/null; then
     info "CalculiX already installed: $(ccx --version 2>&1 | head -1 || echo 'version unknown')"
@@ -136,8 +196,8 @@ else
     success "CalculiX installed"
 fi
 
-# ─── 3. OpenFOAM ESI v2312 ────────────────────────────────────────────────────
-section "3. OpenFOAM ESI v2312"
+# ─── 4. OpenFOAM ESI v2312 ─────────────────────────────────────────────────────
+section "4. OpenFOAM ESI v2312"
 
 if [[ -f "${OPENFOAM_BASHRC}" ]]; then
     info "OpenFOAM ${OPENFOAM_VERSION} already installed"
@@ -158,8 +218,8 @@ else
     warn "simpleFoam not found after install — check ${OPENFOAM_BASHRC}"
 fi
 
-# ─── 4. Python virtual environment ────────────────────────────────────────────
-section "4. Python virtual environment"
+# ─── 5. Python virtual environment ─────────────────────────────────────────────
+section "5. Python virtual environment"
 
 if [[ -d "${VENV_DIR}" ]]; then
     info "Venv already exists at ${VENV_DIR}"
@@ -178,8 +238,8 @@ VENV_PYTHON="${VENV_DIR}/bin/python"
 info "Upgrading pip..."
 "${VENV_PIP}" install --quiet --upgrade pip
 
-# ─── 5. Python packages ───────────────────────────────────────────────────────
-section "5. Python packages"
+# ─── 6. Python packages ────────────────────────────────────────────────────────
+section "6. Python packages"
 
 PYTHON_PKGS=(
     "build123d"
@@ -211,8 +271,8 @@ done
 
 success "Python packages ready"
 
-# ─── 6. Ollama (optional) ─────────────────────────────────────────────────────
-section "6. Ollama local LLM (optional)"
+# ─── 7. Ollama (optional) ──────────────────────────────────────────────────────
+section "7. Ollama local LLM (optional)"
 
 if command -v ollama &>/dev/null; then
     success "Ollama already installed"
@@ -250,8 +310,8 @@ else
     info "Skipping Ollama. To use local LLM later: curl -fsSL https://ollama.com/install.sh | sh"
 fi
 
-# ─── 7. Environment configuration ────────────────────────────────────────────
-section "7. Environment configuration"
+# ─── 8. Environment configuration ──────────────────────────────────────────────
+section "8. Environment configuration"
 
 PROFILE_D="/etc/profile.d/clawgeneer.sh"
 
@@ -298,8 +358,8 @@ fi
 info "To set your GitHub PAT for interactive LLM mode, add to ~/.bashrc:"
 info "  export GITHUB_PAT=your_personal_access_token"
 
-# ─── 8. Projects directory ────────────────────────────────────────────────────
-section "8. Projects directory"
+# ─── 9. Projects directory ──────────────────────────────────────────────────────
+section "9. Projects directory"
 
 if [[ -d "${PROJECTS_DIR}" ]]; then
     info "Projects directory already exists: ${PROJECTS_DIR}"
@@ -309,8 +369,8 @@ else
     success "Projects directory created: ${PROJECTS_DIR}"
 fi
 
-# ─── 9. Run oc check ─────────────────────────────────────────────────────────
-section "9. Verification (oc check)"
+# ─── 10. Run oc check ──────────────────────────────────────────────────────────
+section "10. Verification (oc check)"
 
 PASS=0
 FAIL=0
@@ -329,7 +389,8 @@ check() {
 
 check "python3"            "python3 --version"
 check "ccx (CalculiX)"     "command -v ccx"
-check "freecad"            "command -v freecad || command -v FreeCAD || command -v freecadcmd"
+check "freecad"            "command -v freecad"
+check "freecadcmd"         "command -v freecadcmd"
 check "OpenFOAM bashrc"    "[[ -f '${OPENFOAM_BASHRC}' ]]"
 check "build123d"          "'${VENV_PYTHON}' -c 'import build123d'"
 check "gmsh"               "'${VENV_PYTHON}' -c 'import gmsh'"
@@ -348,7 +409,7 @@ else
     warn "oc check reported missing tools (see output above)"
 fi
 
-# ─── Summary ──────────────────────────────────────────────────────────────────
+# ─── Summary ───────────────────────────────────────────────────────────────────
 section "Bootstrap Complete"
 
 echo -e "  ${GREEN}Passed: ${PASS}${RESET}  ${RED}Failed: ${FAIL}${RESET}"
@@ -356,6 +417,7 @@ echo
 if [[ ${FAIL} -gt 0 ]]; then
     warn "Some checks failed. Review the output above."
     warn "Common fixes:"
+    warn "  - FreeCAD: Re-run bootstrap.sh; the AppImage download may have timed out"
     warn "  - OpenFOAM: Re-run the OpenFOAM repo script manually"
     warn "  - cadquery/build123d: Can be slow to install; re-run bootstrap.sh if it timed out"
 fi

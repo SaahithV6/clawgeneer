@@ -73,14 +73,8 @@ tools:
 
   freecad:
     adapter: null
-    check_path: /usr/bin/freecad
-    install_cmd: "apt install freecad"
+    check_path: /usr/local/bin/freecad
+    install_cmd: "sudo bash clawgeneer/tools/bootstrap.sh"
     input_formats: [".FCStd"]
     output_formats: [".step", ".iges"]
-    description: "GUI CAD modelling. Use via VNC/NoMachine. Export to STEP for pipeline."
-
-  ollama:
-    adapter: null
-    check_binary: ollama
-    install_cmd: "curl -fsSL https://ollama.com/install.sh | sh"
-    description: "Local LLM server. Default model: qwen2.5-coder:7b"
+    description: "GUI CAD modelling via VNC/NoMachine. Installed as AppImage (apt package absent from Ubuntu 24.04). Headless STEP export via freecadcmd."
